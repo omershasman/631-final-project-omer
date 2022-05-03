@@ -1,0 +1,36 @@
+---
+title: "final_project_draft"
+author: "Omer Shasman"
+date: "5/3/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Intro
+
+## What
+
+## Why
+
+## How
+
+# Body
+
+# Topics From Class
+
+## Topic 1:
+
+## Topic 2:
+
+## Topic 3:
+
+## Topic 4:
+
+## Topic 5:
+
+
+# Conclusion
