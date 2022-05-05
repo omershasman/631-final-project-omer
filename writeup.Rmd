@@ -49,26 +49,46 @@ library(ggplot2) ## for charts
 library(readr)
 X2014 <- read_csv("Data/2014.csv")
 head(X2014)
-#
-#X2015 <- read_csv("Data/2015.csv")
-#head(X2015)
-#
-#X2016 <- read_csv("Data/2016.csv")
-#head(X2016)
-#
-#X2017 <- read_csv("Data/2017.csv")
-#head(X2017)
-#
-#X2018 <- read_csv("Data/2018.csv")
-#head(X2018)
+
+X2015 <- read_csv("Data/2015.csv")
+head(X2015)
+
+X2016 <- read_csv("Data/2016.csv")
+head(X2016)
+
+X2017 <- read_csv("Data/2017.csv")
+head(X2017)
+
+X2018 <- read_csv("Data/2018.csv")
+head(X2018)
 
 ```
 
 ```{r}
+airline <- c('DL')
+arrival_airport <- c('MSP')
+X2014_DL <- X2014[X2014$OP_CARRIER %in% airline, ]
+X2015_DL <- X2015[X2015$OP_CARRIER %in% airline,]
+X2016_DL <- X2016[X2016$OP_CARRIER %in% airline,]
+X2017_DL <- X2017[X2017$OP_CARRIER %in% airline,]
+X2018_DL <- X2018[X2018$OP_CARRIER %in% airline,]
+
+X2014_DL_MSP <- X2014_DL[X2014_DL$DEST %in% arrival_airport, ]
+X2015_DL_MSP <- X2015_DL[X2015_DL$DEST %in% arrival_airport, ]
+X2016_DL_MSP <- X2016_DL[X2016_DL$DEST %in% arrival_airport, ]
+X2017_DL_MSP <- X2017_DL[X2017_DL$DEST %in% arrival_airport, ]
+X2018_DL_MSP <- X2018_DL[X2018_DL$DEST %in% arrival_airport, ]
 
 # Combine the 5 vectors to a single vector
-#all_years <- dplyr::bind_rows(X2014, X2015, X2016, X2017, X2018)
-#summary(all_years)
+all_years <- dplyr::bind_rows(X2014_DL_MSP,X2015_DL_MSP,X2016_DL_MSP,X2017_DL_MSP,X2018_DL_MSP,)
+summary(all_years)
+# colnames(all_years)
+```
+
+```{r}
+all_years_delay <- all_years[all_years$WEATHER_DELAY > 0, ]
+summary(all_years_delay)
+plot(all_years_delay$FL_DATE ~ all_years_delay$WEATHER_DELAY)
 ```
 
 
