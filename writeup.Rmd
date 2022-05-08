@@ -14,10 +14,10 @@ knitr::opts_chunk$set(echo = TRUE)
 On Time Performance analysis of an airline network - This is an important metric for the airline that is calculated as the percentage of flights which are delayed by more than 14 minutes while the aircraft arrives at the gate. There are multiple reasons which contribute to the variation in OTP. An analysis of the OTP metric breaking it down into its individual components namely different delay and historical delays can provide insights into how the OTP for an airline can be managed by operational/process changes. The Department of Transport releases the flight level, On Time Performance data. This dataset also has various other factors which affect the Arrival Delay of a flight. An exploratory analysis of this data with the Arrival Delay as the response variable analyzed against different dimensions provided in the dataset can reveal several insights to improve the OTP of an Airline.
 
 ## What
-As part of my Final Project, I am planning to use a subset of OTP data to perform analysis of delays in actual file arrivals focusing on one particular Station and Airline. Since airline operations are very complex, the arrival delays itself can be due to varying factors, like weather delay, carrier delays, security delays, Late aircraft delay...etc or any combinations of any of these in general. My focus is only on 3 types of delays so that I can minimize the complexities in data structures and limit any repeating processes or steps, and rather focus on how to manipulate and do analysis/inference with few variables. Hence I will be considering only 5 years data ranging from year 2014 till 2019 two types of delays "Weather Delays" and "Carrier Delays" 
+As part of my Final Project, I am planning to use a subset of OTP data to perform analysis of delays on actual file arrivals focusing on one particular Station and Airline. Since airline operations are very complex, the arrival delays itself can be due to varying factors, like weather delay, carrier delays, security delays, Late aircraft delay...etc or any combinations of any of these in general. My focus is only on 2 types of delays so that I can minimize the complexities in data structures and limit any repeating processes or steps, and rather focus on how to manipulate and do analysis/inference with few variables. Hence I will be considering only 5 years data ranging from year 2014 till 2019 two types of delays "Weather Delays" and "Carrier Delays" 
 
 ## Why
-I thought airline is an interesting business with lot of complex operation/data and business itself is most of us are familiar with. Also, with the time constraint we have, there are few site which helped me to get on board and which had the proof of concept directly. Few of the reference links are below :
+I thought airline is an interesting business with lot of complex operation/data and business itself is most of us are familiar with. Also, with the time constraint we have, there were few sites which helped me to get onboard directly. Few of the reference links are below :
 [Kaggle](https://www.kaggle.com/datasets/yuanyuwendymu/airline-delay-and-cancellation-data-2009-2018?select=2014.csv)  
 [DOT On-Time_performance](https://www.transtats.bts.gov/databases.asp?f7owrp6_VQ=G&f7owrp6_Qr5p=cn55r0tr4%FDg4n8ry&Z1qr_VQF=D)
 
@@ -26,12 +26,12 @@ This data is presented as yearly file in csv format, I have to merge different y
 ## How
 Use RMarkdown and explore Rfunctions that can integrate some of the topics we learned in the class for flight arrival delay analysis. The following are steps which will be followed as part of the project
 
-- Load data into R using R chunks
+- Load data into R Markdown using R chunks
 - Merge Data using ddplyr 
 - Filter/melt/massage data using Tidy Data approach
 - Use sampling strategy for identifying sample observations.
 - Use Stats function to determine mean, median, IQR,...
-- Regression Analysis
+- Regression - Find any co-relation between total flights arriving at a particualr airport and  delays to identify if it's the airport operational/capacity issue or not.
 
 # Body
 This project perform analysis of flight arrival delays focusing on one particular Station and Airline.
@@ -42,10 +42,11 @@ Since airline delays are unavoidable there is always a chance that a particualr 
 library(knitr) ##for printing tables in R Markdown
 library(dplyr) ##for data munging
 library(ggplot2) ## for charts
+library('infer') ## for rep_sample_n used for clustered sampling
 ```
 
 
-```{r}
+```{r Load data into R Markdown using R chunks}
 library(readr)
 X2014 <- read_csv("Data/2014.csv")
 head(X2014)
@@ -62,58 +63,100 @@ head(X2017)
 X2018 <- read_csv("Data/2018.csv")
 head(X2018)
 
+# Since this is a large dataset, manipulating on total observations is throwing memory error in my machine. So for ease of processing, I am considering a subset of data which have arrival in MSP.
+X2014 <- X2014[X2014$DEST %in% 'MSP', ]
+X2015 <- X2015[X2015$DEST %in% 'MSP', ]
+X2016 <- X2016[X2016$DEST %in% 'MSP', ]
+X2017 <- X2017[X2017$DEST %in% 'MSP', ]
+X2018 <- X2018[X2018$DEST %in% 'MSP', ]
 ```
 
-```{r}
-airline <- c('DL')
-arrival_airport <- c('MSP')
-X2014_DL <- X2014[X2014$OP_CARRIER %in% airline, ]
-X2015_DL <- X2015[X2015$OP_CARRIER %in% airline,]
-X2016_DL <- X2016[X2016$OP_CARRIER %in% airline,]
-X2017_DL <- X2017[X2017$OP_CARRIER %in% airline,]
-X2018_DL <- X2018[X2018$OP_CARRIER %in% airline,]
-
-X2014_DL_MSP <- X2014_DL[X2014_DL$DEST %in% arrival_airport, ]
-X2015_DL_MSP <- X2015_DL[X2015_DL$DEST %in% arrival_airport, ]
-X2016_DL_MSP <- X2016_DL[X2016_DL$DEST %in% arrival_airport, ]
-X2017_DL_MSP <- X2017_DL[X2017_DL$DEST %in% arrival_airport, ]
-X2018_DL_MSP <- X2018_DL[X2018_DL$DEST %in% arrival_airport, ]
-
+```{r Merge Data using ddplyr }
 # Combine the 5 vectors to a single vector
-all_years <- dplyr::bind_rows(X2014_DL_MSP,X2015_DL_MSP,X2016_DL_MSP,X2017_DL_MSP,X2018_DL_MSP,)
-summary(all_years)
+X2014.X2018 <- dplyr::bind_rows(X2014,X2015,X2016,X2017,X2018,)
+
 # colnames(all_years)
 ```
 
+```{r Use sampling strategy for identifying sample observations.}
+# replace all na in the fields we interested in to 0
+X2014.X2018$ARR_DELAY <- X2014.X2018$ARR_DELAY %>% replace(is.na(.), 0)
+
+X2014.X2018$LATE_AIRCRAFT_DELAY <- X2014.X2018$LATE_AIRCRAFT_DELAY %>% replace(is.na(.), 0)
+X2014.X2018$SECURITY_DELAY <- X2014.X2018$SECURITY_DELAY %>% replace(is.na(.), 0)
+X2014.X2018$NAS_DELAY <- X2014.X2018$NAS_DELAY %>% replace(is.na(.), 0)
+X2014.X2018$WEATHER_DELAY <- X2014.X2018$WEATHER_DELAY %>% replace(is.na(.), 0)
+X2014.X2018$CARRIER_DELAY <- X2014.X2018$CARRIER_DELAY %>% replace(is.na(.), 0)
+hist(X2014.X2018$FL_DATE, X2014.X2018$ARR_DELAY, breaks = 100)
+summary(X2014.X2018)
+```
+
+
+
 ```{r}
-all_years_delay <- all_years[all_years$WEATHER_DELAY > 0, ]
-summary(all_years_delay)
-plot(all_years_delay$FL_DATE ~ all_years_delay$WEATHER_DELAY)
+X2014.X2018.delay <- X2014.X2018[X2014.X2018$CARRIER_DELAY > 60, ]
+summary(X2014.X2018.delay)
+plot(X2014.X2018.delay$AIR_TIME, X2014.X2018.delay$CARRIER_DELAY)
 ```
 
 
 # Topics From Class
 
 ## Topic 1:
-R Markdown - I will be presenting the project in R Markdown and knit the file to a pdf document. Will be using R chunks extensively to demonstrate and build the project components. 
+R Markdown - I will be presenting the project in R Markdown and knit the file to a pdf document. Will be using R chunks to demonstrate and build the project components. 
 
 ## Topic 2:
-GitHub - Will host the project in github as source control repository for others to view my project components. 
+GitHub - Will host the project in github repository for others to view my project components. 
 
 ## Topic 3:
-Sampling strategies for an Observational study - Will be using startified sampling strategy to group the data together(maybe by flight# range) and then use simple random sampling method to create sample data for Topics #4 and #5.
+Sampling strategies for an Observational study - Will be using sampling strategies - Simple random sampling, Strtified sampling, Cluster sampling and multistage sampling to group the data together by using different variables from the dataset and then use one of the sampling result to build topic#4 and 5.
 
-```{r}
-# s_data <- dplyr::sample_n(all_years, 10000, replace=FALSE)
-# View(s_data)
+```{r Sampling_Strategy - Simple sampling}
+simple.sampling <- dplyr::sample_n(X2014.X2018, 10000, replace=FALSE)
+View(simple.sampling)
 ```
+
+```{r Sampling_Strategy - Stratified sampling}
+# Here I am making a cluster of where Airline code is the strata
+# airline <- c('DL')
+DL <- X2014.X2018[X2014.X2018$OP_CARRIER %in% 'DL', ]
+UA <- X2014.X2018[X2014.X2018$OP_CARRIER %in% 'UA',]
+AA <- X2014.X2018[X2014.X2018$OP_CARRIER %in% 'AA',]
+WN <- X2014.X2018[X2014.X2018$OP_CARRIER %in% airline,]
+
+stratified.sampling <- dplyr::sample_n((UA), 10000, replace=FALSE)
+dim(stratified.sampling)
+```
+
+```{r Sampling_Strategy - Clustered sampling}
+# cluister1 <- dplyr::sample_n((X2014.X2018), 10000, replace=FALSE)
+# cluister2 <- dplyr::sample_n((X2014.X2018), 10000, replace=FALSE)
+# cluister3 <- dplyr::sample_n((X2014.X2018), 10000, replace=FALSE)
+dim(X2014.X2018)
+#randomly choose 4 10 groups out of the n
+clusters <- sample(unique(X2014.X2018$OP_CARRIER), size=10, replace=FALSE)
+
+#define sample as all members who belong to one of the 10 tour groups
+cluster_sample <- all_years[X2014.X2018$OP_CARRIER %in% clusters, ]
+
+#view how many observations came from each tour
+table(cluster_sample$OP_CARRIER)
+cluster_sample
+
+```
+
 
 ## Topic 4:
 Detailing Summary statistics ( Min. , 1st Qu., Median, Mean, 3rd Qu., Max.) of a variable and plotting graphs using ggplot2
 
+```{r}
+plot(cluster_sample$CARRIER_DELAY)
+```
+
+
 ## Topic 5:
-Regression analysis(on if a particular type of delay has decreased over the time or not) or alternately will be pereforming ANOVA(Analysis of Variance) to identify any mean differences 
+Regression (on if a particular type of delay has decreased over the time or not).
 
 # Conclusion
-I designed this project as a way to review some of the topics we learned in the class/homework/assignments to reinforce and refer back some of the materials we learned already. Hence I thought of picking a variety of topics like sampling strategies, summary statistics, ANOVA and regressions will be the best approach and most I can get given the time constraints. If I have more time, I would have included some more topics (like binom, dbinom, geom...etc distributions) and see if my dataset have variables that can fit these distributions. Given only a academic background in statistics almost two decades ago, I think this subject has given me much learning experience in statistics and I appreciate how these topics are applicable to find solutions to real world problems.
+I designed this project as a way to review some of the topics we learned in the class/homework/assignments to reinforce some topics learned and also as an opportunity to refer back some of the materials. Hence I thought of picking a variety of topics like sampling strategies, summary statistics, ANOVA and regressions will be the best approach and most I can get from this project. If I have more time, I would have included some more topics (like binom, dbinom, geom...etc distributions) and see if my dataset have variables that can fit these distributions. Given only a academic background in statistics almost almost 20 years ago, I think this subject has given me much learning experience in statistics and I appreciate how these topics are applicable to find solutions in reality.
 
