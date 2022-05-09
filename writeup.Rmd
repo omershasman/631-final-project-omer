@@ -17,9 +17,7 @@ On Time Performance analysis of an airline network - This is an important metric
 As part of my Final Project, I am planning to use a subset of OTP data to perform analysis of delays on actual file arrivals focusing on one particular Station and Airline. Since airline operations are very complex, the arrival delays itself can be due to varying factors, like weather delay, carrier delays, security delays, Late aircraft delay...etc or any combinations of any of these in general. My focus is only on 2 types of delays so that I can minimize the complexities in data structures and limit any repeating processes or steps, and rather focus on how to manipulate and do analysis/inference with few variables. Hence I will be considering only 5 years data ranging from year 2014 till 2019 two types of delays "Weather Delays" and "Carrier Delays" 
 
 ## Why
-I thought airline is an interesting business with lot of complex operation/data and business itself is most of us are familiar with. Also, with the time constraint we have, there were few sites which helped me to get onboard directly. Few of the reference links are below :
-[Kaggle](https://www.kaggle.com/datasets/yuanyuwendymu/airline-delay-and-cancellation-data-2009-2018?select=2014.csv)  
-[DOT On-Time_performance](https://www.transtats.bts.gov/databases.asp?f7owrp6_VQ=G&f7owrp6_Qr5p=cn55r0tr4%FDg4n8ry&Z1qr_VQF=D)
+I thought airline is an interesting business with lot of complex operation/data and business itself is most of us are familiar with. Also, with the time constraint we have, there were few sites like [Kaggle](https://www.kaggle.com/datasets/yuanyuwendymu/airline-delay-and-cancellation-data-2009-2018?select=2014.csv)  and [DOT On-Time_performance](https://www.transtats.bts.gov/databases.asp?f7owrp6_VQ=G&f7owrp6_Qr5p=cn55r0tr4%FDg4n8ry&Z1qr_VQF=D)
 
 This data is presented as yearly file in csv format, I have to merge different years data using dply bind command to append rows at the end and build one file.
 
@@ -44,56 +42,57 @@ library(knitr) ##for printing tables in R Markdown
 library(dplyr) ##for data munging
 library(ggplot2) ## for charts
 library('infer') ## for rep_sample_n used for clustered sampling
+library("lubridate")
 ```
 
 
 ```{r Load data into R Markdown using R chunks}
 library(readr)
-X2014 <- read_csv("Data/2014.csv")
-head(X2014)
+flight.data.y2014 <- read_csv("Data/2014.csv")
+head(flight.data.y2014)
 
-X2015 <- read_csv("Data/2015.csv")
-head(X2015)
+flight.data.y2015 <- read_csv("Data/2015.csv")
+head(flight.data.y2015)
 
-X2016 <- read_csv("Data/2016.csv")
-head(X2016)
+flight.data.y2016 <- read_csv("Data/2016.csv")
+head(flight.data.y2016)
 
-X2017 <- read_csv("Data/2017.csv")
-head(X2017)
+flight.data.y2017 <- read_csv("Data/2017.csv")
+head(flight.data.y2017)
 
-X2018 <- read_csv("Data/2018.csv")
-head(X2018)
+flight.data.y2018 <- read_csv("Data/2018.csv")
+head(flight.data.y2018)
 
 # Since this is a large dataset, sampling/manipualting on all the observations is throwing memory error in my machine. So for ease of processing, I am considering a subset of data with arrival as MSP.
-X2014 <- X2014[X2014$DEST %in% 'MSP', ]
-X2015 <- X2015[X2015$DEST %in% 'MSP', ]
-X2016 <- X2016[X2016$DEST %in% 'MSP', ]
-X2017 <- X2017[X2017$DEST %in% 'MSP', ]
-X2018 <- X2018[X2018$DEST %in% 'MSP', ]
+flight.data.y2014 <- flight.data.y2014[flight.data.y2014$DEST %in% 'MSP', ]
+flight.data.y2015 <- flight.data.y2015[flight.data.y2015$DEST %in% 'MSP', ]
+flight.data.y2016 <- flight.data.y2016[flight.data.y2016$DEST %in% 'MSP', ]
+flight.data.y2017 <- flight.data.y2017[flight.data.y2017$DEST %in% 'MSP', ]
+flight.data.y2018 <- flight.data.y2018[flight.data.y2018$DEST %in% 'MSP', ]
 ```
 
 ```{r Merge Data using ddplyr }
 # Combine the 5 vectors to a single vector
-X2014.X2018 <- dplyr::bind_rows(X2014,X2015,X2016,X2017,X2018,)
+flight.data.y2014.y2018 <- dplyr::bind_rows(flight.data.y2014,flight.data.y2015,flight.data.y2016,flight.data.y2017,flight.data.y2018,)
 
 # replace all na in the fields we interested in to 0
-X2014.X2018$ARR_DELAY <- X2014.X2018$ARR_DELAY %>% replace(is.na(.), 0)
+flight.data.y2014.y2018$ARR_DELAY <- flight.data.y2014.y2018$ARR_DELAY %>% replace(is.na(.), 0)
 
-X2014.X2018$LATE_AIRCRAFT_DELAY <- X2014.X2018$LATE_AIRCRAFT_DELAY %>% replace(is.na(.), 0)
-X2014.X2018$SECURITY_DELAY <- X2014.X2018$SECURITY_DELAY %>% replace(is.na(.), 0)
-X2014.X2018$NAS_DELAY <- X2014.X2018$NAS_DELAY %>% replace(is.na(.), 0)
-X2014.X2018$WEATHER_DELAY <- X2014.X2018$WEATHER_DELAY %>% replace(is.na(.), 0)
-X2014.X2018$CARRIER_DELAY <- X2014.X2018$CARRIER_DELAY %>% replace(is.na(.), 0)
-hist(X2014.X2018$FL_DATE, X2014.X2018$ARR_DELAY, breaks = 100)
-summary(X2014.X2018)
+flight.data.y2014.y2018$LATE_AIRCRAFT_DELAY <- flight.data.y2014.y2018$LATE_AIRCRAFT_DELAY %>% replace(is.na(.), 0)
+flight.data.y2014.y2018$SECURITY_DELAY <- flight.data.y2014.y2018$SECURITY_DELAY %>% replace(is.na(.), 0)
+# flight.data.y2014.y2018$NAS_DELAY <- flight.data.y2014.y2018$NAS_DELAY %>% replace(is.na(.), 0)
+flight.data.y2014.y2018$WEATHER_DELAY <- flight.data.y2014.y2018$WEATHER_DELAY %>% replace(is.na(.), 0)
+flight.data.y2014.y2018$CARRIER_DELAY <- flight.data.y2014.y2018$CARRIER_DELAY %>% replace(is.na(.), 0)
+hist(flight.data.y2014.y2018$FL_DATE, flight.data.y2014.y2018$ARR_DELAY, breaks = 100)
+summary(flight.data.y2014.y2018)
 
-# colnames(X2014.X2018)
+# colnames(flight.data.y2014.y2018)
 ```
 
 ```{r}
-X2014.X2018.delay <- X2014.X2018[X2014.X2018$CARRIER_DELAY > 60, ]
-summary(X2014.X2018.delay)
-plot(X2014.X2018.delay$AIR_TIME, X2014.X2018.delay$CARRIER_DELAY)
+flight.data.y2014.y2018.delay <- flight.data.y2014.y2018[flight.data.y2014.y2018$CARRIER_DELAY > 800, ]
+summary(flight.data.y2014.y2018.delay)
+plot(flight.data.y2014.y2018.delay$AIR_TIME, flight.data.y2014.y2018.delay$CARRIER_DELAY)
 ```
 
 
@@ -109,32 +108,31 @@ GitHub - Will host the project in github repository for others to view my projec
 Sampling strategies for an Observational study - Will be using sampling strategies - Simple random sampling, Strtified sampling, Cluster sampling and multistage sampling to group the data together by using different variables from the dataset and then use one of the sampling result to build topic#4 and 5.
 
 ```{r Sampling_Strategy - Simple sampling}
-simple.sampling <- dplyr::sample_n(X2014.X2018, 10000, replace=FALSE)
+simple.sampling <- dplyr::sample_n(flight.data.y2014.y2018, 10000, replace=FALSE)
 View(simple.sampling)
 ```
 
 ```{r Sampling_Strategy - Stratified sampling}
 # Here I am making a cluster of where Airline code is the strata
-# airline <- c('DL')
-DL <- X2014.X2018[X2014.X2018$OP_CARRIER %in% 'DL', ]
-UA <- X2014.X2018[X2014.X2018$OP_CARRIER %in% 'UA',]
-AA <- X2014.X2018[X2014.X2018$OP_CARRIER %in% 'AA',]
-WN <- X2014.X2018[X2014.X2018$OP_CARRIER %in% airline,]
+DL <- flight.data.y2014.y2018[flight.data.y2014.y2018$OP_CARRIER %in% 'DL', ]
+UA <- flight.data.y2014.y2018[flight.data.y2014.y2018$OP_CARRIER %in% 'UA',]
+AA <- flight.data.y2014.y2018[flight.data.y2014.y2018$OP_CARRIER %in% 'AA',]
+WN <- flight.data.y2014.y2018[flight.data.y2014.y2018$OP_CARRIER %in% airline,]
 
 stratified.sampling <- dplyr::sample_n((UA), 10000, replace=FALSE)
 dim(stratified.sampling)
 ```
 
 ```{r Sampling_Strategy - Clustered sampling}
-# cluister1 <- dplyr::sample_n((X2014.X2018), 10000, replace=FALSE)
-# cluister2 <- dplyr::sample_n((X2014.X2018), 10000, replace=FALSE)
-# cluister3 <- dplyr::sample_n((X2014.X2018), 10000, replace=FALSE)
-dim(X2014.X2018)
+# cluister1 <- dplyr::sample_n((flight.data.y2014.y2018), 10000, replace=FALSE)
+# cluister2 <- dplyr::sample_n((flight.data.y2014.y2018), 10000, replace=FALSE)
+# cluister3 <- dplyr::sample_n((flight.data.y2014.y2018), 10000, replace=FALSE)
+dim(flight.data.y2014.y2018)
 #randomly choose 4 10 groups out of the n
-clusters <- sample(unique(X2014.X2018$OP_CARRIER), size=10, replace=FALSE)
+clusters <- sample(unique(flight.data.y2014.y2018$OP_CARRIER), size=10, replace=FALSE)
 
-#define sample as all members who belong to one of the 10 tour groups
-clustered_by_op_carrier <- all_years[X2014.X2018$OP_CARRIER %in% clusters, ]
+#define sample as all members who belong to one of the 10 operated carriers
+clustered_by_op_carrier <- all_years[flight.data.y2014.y2018$OP_CARRIER %in% clusters, ]
 
 #view how many observations came from each tour
 table(clustered_by_op_carrier$OP_CARRIER)
@@ -147,42 +145,80 @@ clustered_by_op_carrier
 Detailing Summary statistics ( Min. , 1st Qu., Median, Mean, 3rd Qu., Max.) of a variable and plotting graphs using ggplot2
 
 
-
-```{r}
+```{r CARRIER_DELAY - Years 2014-2028}
 # First select the sub-vectors which contains only he coulums we are interested in
-carrier_delay_by_op_carrier <- clustered_by_op_carrier %>% select(c(FL_DATE, OP_CARRIER, CARRIER_DELAY))
+carrier_delay_by_op_carrier <- clustered_by_op_carrier %>% select(c(FL_DATE, OP_CARRIER, CARRIER_DELAY)) %>% filter(OP_CARRIER == 'DL') %>%  filter(CARRIER_DELAY > 0) 
 carrier_delay_by_op_carrier
-# hist(cluster_sample$CARRIER_DELAY > 0)
+hist(carrier_delay_by_op_carrier$FL_DATE, carrier_delay_by_op_carrier$CARRIER_DELAY, breaks = 100, col="lightblue")
 ```
 
+```{r CARRIER_DELAY - Months in 2016}
+# In 2016 we have a increase in delay. Let's find out month by analysis to approximate on which month in 2016 we have this issue.
+carrier_delay_by_op_carrier_2016 <- carrier_delay_by_op_carrier
+carrier_delay_by_op_carrier_2016$YEAR <- format(carrier_delay_by_op_carrier$FL_DATE, "%Y")
+carrier_delay_by_op_carrier_2016 <- carrier_delay_by_op_carrier_2016 %>% filter(YEAR == '2016')
+carrier_delay_by_op_carrier_2016$MONTH <- format(carrier_delay_by_op_carrier_2016$FL_DATE, "%m")
+hist(carrier_delay_by_op_carrier_2016$FL_DATE, carrier_delay_by_op_carrier_2016$CARRIER_DELAY, breaks =200, col="lightgreen")
+
+```
+```{r CARRIER_DELAY - Day in Aug2016}
+carrier_delay_by_op_carrier_2016_AUG <- carrier_delay_by_op_carrier_2016
+carrier_delay_by_op_carrier_2016_AUG <- carrier_delay_by_op_carrier_2016_AUG %>% filter(MONTH == '08')
+carrier_delay_by_op_carrier_2016_AUG$DAY <- format(carrier_delay_by_op_carrier_2016_AUG$FL_DATE, "%d")
+hist(carrier_delay_by_op_carrier_2016_AUG$FL_DATE, carrier_delay_by_op_carrier_2016_AUG$CARRIER_DELAY, breaks =40, col="orange")
+summary(carrier_delay_by_op_carrier_2016_AUG$CARRIER_DELAY)
+```
+
+
+## WEATHER DELAY
+```{r WEATHER DELAY - Years 2014-2028}
+# First select the sub-vectors which contains only he coulums we are interested in
+weather_delay_by_op_carrier <- clustered_by_op_carrier %>% select(c(FL_DATE, OP_CARRIER, WEATHER_DELAY)) %>% filter(OP_CARRIER == 'DL') %>%  filter(WEATHER_DELAY > 0) 
+weather_delay_by_op_carrier
+hist(weather_delay_by_op_carrier$FL_DATE, weather_delay_by_op_carrier$WEATHER_DELAY, breaks = 100, col="lightblue")
+```
+
+```{r WEATHER DELAY - Months in 2016}
+# In 2016 we have a increase in delay. Let's find out month by analysis to approximate on which month in 2016 we have this issue.
+weather_delay_by_op_carrier_2016 <- weather_delay_by_op_carrier
+weather_delay_by_op_carrier_2016$YEAR <- format(weather_delay_by_op_carrier$FL_DATE, "%Y")
+weather_delay_by_op_carrier_2016 <- weather_delay_by_op_carrier_2016 %>% filter(YEAR == '2016')
+weather_delay_by_op_carrier_2016$MONTH <- format(weather_delay_by_op_carrier_2016$FL_DATE, "%m")
+hist(weather_delay_by_op_carrier_2016$FL_DATE, weather_delay_by_op_carrier_2016$weather_delay, breaks =200, col="lightgreen")
+
+```
+```{r WEATHER DELAY - Days in Dec2016}
+weather_delay_by_op_carrier_2016_DEC <- weather_delay_by_op_carrier_2016 %>% filter(MONTH == '12')
+weather_delay_by_op_carrier_2016_DEC$DAY <- format(weather_delay_by_op_carrier_2016_DEC$FL_DATE, "%d")
+hist(weather_delay_by_op_carrier_2016_DEC$FL_DATE, weather_delay_by_op_carrier_2016_DEC$weather_delay, breaks =40, col="orange")
+summary(weather_delay_by_op_carrier_2016_DEC$weather_delay)
+```
+
+
+
+
+
 ```{r}
-X2014.X2018$carrierDelay <- ifelse(X2014.X2018$CARRIER_DELAY<0,0,X2014.X2018$CARRIER_DELAY)
-X2014.X2018$MONTH <- format(X2014.X2018$FL_DATE, "%m")
-X2014.X2018$YEAR <- format(X2014.X2018$FL_DATE, "%Y")
-summary(X2014.X2018$CARRIER_DELAY)
-month_delay_X2014.X2018 <- X2014.X2018 %>%
-  group_by(MONTH) %>% 
-  summarize(percentage_delay=((1-mean(X2014.X2018$CARRIER_DELAY)))*100) 
-  # %>%
-   # mutate(year = '2014')
-  
-# month_delay_2016<-data_2016 %>%
-#   group_by(month) %>% 
-#   summarize(percentage_delay=((1-mean(dot_on_time_ind)))*100) %>%
-#    mutate(year=2016)
+# weather_delay_by_op_carrier_2016 <- ifelse(weather_delay_by_op_carrier_2016$WEATHER_DELAY<0,0,weather_delay_by_op_carrier_2016$WEATHER_DELAY)
+weather_delay_by_op_carrier_2016.gorupby <- flight.data.y2016 %>% select(c(FL_DATE, OP_CARRIER, WEATHER_DELAY)) %>% filter(OP_CARRIER == 'DL') %>% filter(WEATHER_DELAY > 0) %>% group_by(FL_DATE) %>% tally()
+weather_delay_by_op_carrier_2016.gorupby
+
+weather_delay_by_op_carrier_2017.gorupby <- flight.data.y2017 %>% select(c(FL_DATE, OP_CARRIER, WEATHER_DELAY)) %>% filter(OP_CARRIER == 'DL') %>% filter(WEATHER_DELAY > 0) %>% group_by(FL_DATE) %>% tally()
+weather_delay_by_op_carrier_2017.gorupby
 
 # month_delay_2015<- month_delay_2015[c(5,4,8,1,9,7,6,2,12,11,10,3),]
-# month_delay_2016<- month_delay_2016[c(5,4,8,1,9,7,6,2,12,11,10,3),]
+# weather_delay_by_op_carrier_2016.gorupby<- weather_delay_by_op_carrier_2016.gorupby[c(5,4,8,1,9,7,6,2,12,11,10,3),]
 # 
 # 
-# month_Delay<-rbind(month_delay_2015,month_delay_2016)
-month_delay_X2014.X2018 <- month_delay_X2014.X2018[c(5,4,8,1,9,7,6,2,12,11,10,3),]
-month_delay_X2014.X2018
-month_Delay<-rbind(month_delay_X2014.X2018)
+# month_Delay<-rbind(weather_delay_by_op_carrier_2016.gorupby, weather_delay_by_op_carrier_2017.gorupby)
+month_Delay<-rbind(weather_delay_by_op_carrier_2016.gorupby)
 
-ggplot(month_Delay, aes(x = MONTH, y= percentage_delay, color = factor(year), group = factor(year))) +
-geom_line()+
-  labs(title="Percentage of Flights Delayed across Months",y = 'Percentage Delay',x = 'Months', fill='Year')
+month_Delay$YEAR <- month(month_Delay$FL_DATE)
+month_Delay$MONTH <- year(month_Delay$FL_DATE)
+month_Delay                            
+ggplot(month_Delay, aes(x = MONTH, y = n, color = factor(MONTH), group = factor(YEAR))) +
+geom_line() +
+  labs(title="Total Flights Delayed across Months",y = 'Number of Delays',x = 'Months', fill='YEAR')
 ```
 
 
@@ -192,8 +228,8 @@ Regression (on if a particular type of delay has decreased over the time or not)
 
 
 ```{r}
-# plot(X2014.X2018$CARRIER_DELAY ~ length(X2014.X2018$CARRIER_DELAY))
-ggplot(data = X2014.X2018, mapping = aes(x = FL_DATE, y = CARRIER_DELAY))+  # set data and axes mapping
+# plot(flight.data.y2014.y2018$CARRIER_DELAY ~ length(flight.data.y2014.y2018$CARRIER_DELAY))
+ggplot(data = flight.data.y2014.y2018, mapping = aes(x = FL_DATE, y = CARRIER_DELAY))+  # set data and axes mapping
   geom_point(color = "darkgreen", size = .5, alpha = 0.2)         # set static point aesthetics
 
 ```
