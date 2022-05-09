@@ -32,6 +32,7 @@ Use RMarkdown and explore Rfunctions that can integrate some of the topics we le
 - Use sampling strategy for identifying sample observations.
 - Use Stats function to determine mean, median, IQR,...
 - Regression - Find any co-relation between total flights arriving at a particualr airport and  delays to identify if it's the airport operational/capacity issue or not.
+- Could hosted data and R Markdown interface. Pull data from AWS S3 buckets than loading from local machine.
 
 # Body
 This project perform analysis of flight arrival delays focusing on one particular Station and Airline.
@@ -63,7 +64,7 @@ head(X2017)
 X2018 <- read_csv("Data/2018.csv")
 head(X2018)
 
-# Since this is a large dataset, manipulating on total observations is throwing memory error in my machine. So for ease of processing, I am considering a subset of data which have arrival in MSP.
+# Since this is a large dataset, sampling/manipualting on all the observations is throwing memory error in my machine. So for ease of processing, I am considering a subset of data with arrival as MSP.
 X2014 <- X2014[X2014$DEST %in% 'MSP', ]
 X2015 <- X2015[X2015$DEST %in% 'MSP', ]
 X2016 <- X2016[X2016$DEST %in% 'MSP', ]
@@ -75,10 +76,6 @@ X2018 <- X2018[X2018$DEST %in% 'MSP', ]
 # Combine the 5 vectors to a single vector
 X2014.X2018 <- dplyr::bind_rows(X2014,X2015,X2016,X2017,X2018,)
 
-# colnames(all_years)
-```
-
-```{r Use sampling strategy for identifying sample observations.}
 # replace all na in the fields we interested in to 0
 X2014.X2018$ARR_DELAY <- X2014.X2018$ARR_DELAY %>% replace(is.na(.), 0)
 
@@ -89,9 +86,9 @@ X2014.X2018$WEATHER_DELAY <- X2014.X2018$WEATHER_DELAY %>% replace(is.na(.), 0)
 X2014.X2018$CARRIER_DELAY <- X2014.X2018$CARRIER_DELAY %>% replace(is.na(.), 0)
 hist(X2014.X2018$FL_DATE, X2014.X2018$ARR_DELAY, breaks = 100)
 summary(X2014.X2018)
+
+# colnames(X2014.X2018)
 ```
-
-
 
 ```{r}
 X2014.X2018.delay <- X2014.X2018[X2014.X2018$CARRIER_DELAY > 60, ]
@@ -137,11 +134,11 @@ dim(X2014.X2018)
 clusters <- sample(unique(X2014.X2018$OP_CARRIER), size=10, replace=FALSE)
 
 #define sample as all members who belong to one of the 10 tour groups
-cluster_sample <- all_years[X2014.X2018$OP_CARRIER %in% clusters, ]
+clustered_by_op_carrier <- all_years[X2014.X2018$OP_CARRIER %in% clusters, ]
 
 #view how many observations came from each tour
-table(cluster_sample$OP_CARRIER)
-cluster_sample
+table(clustered_by_op_carrier$OP_CARRIER)
+clustered_by_op_carrier
 
 ```
 
@@ -149,14 +146,73 @@ cluster_sample
 ## Topic 4:
 Detailing Summary statistics ( Min. , 1st Qu., Median, Mean, 3rd Qu., Max.) of a variable and plotting graphs using ggplot2
 
+
+
 ```{r}
-plot(cluster_sample$CARRIER_DELAY)
+# First select the sub-vectors which contains only he coulums we are interested in
+carrier_delay_by_op_carrier <- clustered_by_op_carrier %>% select(c(FL_DATE, OP_CARRIER, CARRIER_DELAY))
+carrier_delay_by_op_carrier
+# hist(cluster_sample$CARRIER_DELAY > 0)
 ```
+
+```{r}
+X2014.X2018$carrierDelay <- ifelse(X2014.X2018$CARRIER_DELAY<0,0,X2014.X2018$CARRIER_DELAY)
+X2014.X2018$MONTH <- format(X2014.X2018$FL_DATE, "%m")
+X2014.X2018$YEAR <- format(X2014.X2018$FL_DATE, "%Y")
+summary(X2014.X2018$CARRIER_DELAY)
+month_delay_X2014.X2018 <- X2014.X2018 %>%
+  group_by(MONTH) %>% 
+  summarize(percentage_delay=((1-mean(X2014.X2018$CARRIER_DELAY)))*100) 
+  # %>%
+   # mutate(year = '2014')
+  
+# month_delay_2016<-data_2016 %>%
+#   group_by(month) %>% 
+#   summarize(percentage_delay=((1-mean(dot_on_time_ind)))*100) %>%
+#    mutate(year=2016)
+
+# month_delay_2015<- month_delay_2015[c(5,4,8,1,9,7,6,2,12,11,10,3),]
+# month_delay_2016<- month_delay_2016[c(5,4,8,1,9,7,6,2,12,11,10,3),]
+# 
+# 
+# month_Delay<-rbind(month_delay_2015,month_delay_2016)
+month_delay_X2014.X2018 <- month_delay_X2014.X2018[c(5,4,8,1,9,7,6,2,12,11,10,3),]
+month_delay_X2014.X2018
+month_Delay<-rbind(month_delay_X2014.X2018)
+
+ggplot(month_Delay, aes(x = MONTH, y= percentage_delay, color = factor(year), group = factor(year))) +
+geom_line()+
+  labs(title="Percentage of Flights Delayed across Months",y = 'Percentage Delay',x = 'Months', fill='Year')
+```
+
 
 
 ## Topic 5:
 Regression (on if a particular type of delay has decreased over the time or not).
 
+
+```{r}
+# plot(X2014.X2018$CARRIER_DELAY ~ length(X2014.X2018$CARRIER_DELAY))
+ggplot(data = X2014.X2018, mapping = aes(x = FL_DATE, y = CARRIER_DELAY))+  # set data and axes mapping
+  geom_point(color = "darkgreen", size = .5, alpha = 0.2)         # set static point aesthetics
+
+```
+
 # Conclusion
 I designed this project as a way to review some of the topics we learned in the class/homework/assignments to reinforce some topics learned and also as an opportunity to refer back some of the materials. Hence I thought of picking a variety of topics like sampling strategies, summary statistics, ANOVA and regressions will be the best approach and most I can get from this project. If I have more time, I would have included some more topics (like binom, dbinom, geom...etc distributions) and see if my dataset have variables that can fit these distributions. Given only a academic background in statistics almost almost 20 years ago, I think this subject has given me much learning experience in statistics and I appreciate how these topics are applicable to find solutions in reality.
+
+
+Access to aws s3 bucket
+```{r}
+library("aws.s3")
+Sys.setenv(
+  "AWS_ACCESS_KEY_ID" = "AKIAUTK5NLVJF67UNMH5",
+  "AWS_SECRET_ACCESS_KEY" = "",
+  "AWS_DEFAULT_REGION" = "us-east-1"
+)
+```
+
+```{r}
+bucketlist()
+```
 
