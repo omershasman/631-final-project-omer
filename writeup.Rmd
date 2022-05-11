@@ -294,7 +294,6 @@ summary(weather_delay_by_op_carrier_2016_DEC$weather_delay)
 
 
 
-
 ```{r}
 weather_delay_by_op_carrier_2014.gorupby <- 
   flight.data.y2014 %>% 
@@ -354,7 +353,7 @@ ggplot(month_Delay,
 geom_line(linetype = 1) +
   labs(title="Total Flights Delayed across Months",y = 'Number of Delays',x = 'Months', fill='YEAR')
 ```
-The above plot shows weather delays during 2014-2018 and it's clear that most of the weather related delays happens during year start/end.
+The above plot shows weather delays during 2014-2018 and it's clear that most of the weather related delays happens during year start/end. 
 
 
 ## Topic 5:
@@ -403,7 +402,7 @@ There appears to be have a linear relation between carrier delay and total fligh
 library("aws.s3")
 Sys.setenv(
   "AWS_ACCESS_KEY_ID" = "AKIAUTK5NLVJF67UNMH5",
-  "AWS_SECRET_ACCESS_KEY" = "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",
+  "AWS_SECRET_ACCESS_KEY" = "",
   "AWS_DEFAULT_REGION" = "us-east-1"
 )
 ```
