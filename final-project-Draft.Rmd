@@ -15,19 +15,19 @@ knitr::opts_chunk$set(echo = TRUE,fig.width = 12,fig.height = 4)
 On Time Performance analysis of an airline network - This is an important metric for the airline which are delayed while the aircraft arrives at the gate. There are multiple reasons which contribute to the variation in OTP. An analysis of the OTP data breaking it down into its individual components namely different delay and historical delays can provide insights into how the OTP for an airline can be managed by operational/process changes. The Department of Transport releases the flight level, On Time Performance data. This dataset also has various other factors which affect the Arrival Delay of a flight. An exploratory analysis of this data with the Arrival Delay as the response variable analyzed against different dimensions provided in the dataset can reveal several insights to improve the OTP of an Airline.
 
 ## What
-As part of my Final Project, I am planning to use a subset of OTP data to perform analysis of delays on actual file arrivals focusing on one particular Station and Airline. Since airline operations are very complex, the arrival delays itself can be due to varying factors, like weather delay, carrier delays, security delays, Late aircraft delay...etc or any combinations of any of these in general. My focus is only on 2 types of delays so that I can minimize the complexities in data structures and limit any repeating processes or steps, and rather focus on how to explore data and do analysis/inference with few variables. Hence I will be considering only 5 years data ranging from year 2014 till 2018 and two types of delays "Weather Delays" and "Carrier Delays" 
+As my Final Project, I am planning to use a subset of OTP data to perform analysis of delays on actual file arrivals focusing on one particular Station and Airline. Since airline operations are very complex, the arrival delays itself can be due to varying factors, like weather delay, carrier delays, security delays, Late aircraft delay...etc or any combinations of any of these in general. My focus is only on 2 types of delays so that I can minimize the complexities in data structures and limit any repeating processes or steps, and rather focus on how to explore data and do analysis/inference with few variables. Hence I will be considering only 5 years data ranging from year 2014 till 2018 and two types of delays "Weather Delays" and "Carrier Delays" 
 
 ## Why
 I thought airline is an interesting business with lot of complex operation/data and business itself is most of us are familiar with. Also, with the time constraint we have, there were few sites like given below which gives a head start for this project. [Kaggle](https://www.kaggle.com/datasets/yuanyuwendymu/airline-delay-and-cancellation-data-2009-2018?select=2014.csv)  and [DOT On-Time_performance](https://www.transtats.bts.gov/databases.asp?f7owrp6_VQ=G&f7owrp6_Qr5p=cn55r0tr4%FDg4n8ry&Z1qr_VQF=D)
 
-This data is presented as yearly file in csv format, I have to merge different years data using dply bind command to append rows at the end and build one file.
+This data is presented as yearly file in csv format, I have to merge different years data using dply bind command to append rows to build one master file for implementing different plots in base R as well as ggplot.
 
 ## How
-Use RMarkdown and explore Rfunctions that can integrate some of the topics we learned in the class for flight arrival delay analysis. The following are steps which will be followed as part of the project
+Use RMarkdown and explore R functions by utilizing some of the topics learned in the class. The following are steps which will be followed as part of the project
 
-- Load data into R Markdown using R chunks
-- Merge Data using ddplyr 
-- Filter/melt/massage data using Tidy Data approach
+- Load data into R Markdown using R chunks.
+- Merge Data using dplyr.
+- Filter/melt/massage data using Tidyverse.
 - Use sampling strategy for identifying sample observations.
 - Use Stats function to determine mean, median, IQR,...
 - Regression - Find any co-relation between total flights arriving at a particular airport and  delays to identify if it's the airport operational/capacity issue or not.
@@ -35,22 +35,24 @@ Use RMarkdown and explore Rfunctions that can integrate some of the topics we le
 
 # Body
 This project perform analysis of flight arrival delays focusing on one particular Station and Airline.
-Since airline delays are unavoidable there is always a chance that a flight will be delayed. I think this analysis can be used to further study on why a particular delay happens and if the process/schedule/operations can be enhanced or refined to minimize delays and adjust future flight schedules. 
+This analysis can be used to answer some of the questions on airline delays like how often a particular delay happens and if the process/schedule/operations can be enhanced or optimized to minimize delays and adjust future schedules. 
 
 # Packages Required
-```{r message=TRUE, warning=FALSE, paged.print=TRUE}
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 library(knitr) ##for printing tables in R Markdown
 library(dplyr) ##for data munging
 library(ggplot2) ## for charts
 library(infer) ## for rep_sample_n used for clustered sampling
 ```
-
-
-```{r Load data into R Markdown using R chunks, message=FALSE, warning=FALSE, paged.print=FALSE}
+Below code loads data into R.
+Since this is a large data set, sampling/manipualting on all the observations 
+is throwing memory error in my machine. So for ease of processing, I am 
+considering a subset of data operated by Delta Air Lines(OP_CARRIER =='DL').
+```{r, message=FALSE, warning=FALSE, paged.print=FALSE}
 library(readr)
 flight.data.y2014 <- read_csv("Data/2014.csv") %>%
   filter(OP_CARRIER == 'DL') %>%
-  select(c(FL_DATE, DEST, CARRIER_DELAY, WEATHER_DELAY, \
+  select(c(FL_DATE, DEST, CARRIER_DELAY, WEATHER_DELAY, 
            CARRIER_DELAY, AIR_TIME, CRS_ARR_TIME))
 # head(flight.data.y2014)
 
@@ -78,12 +80,9 @@ flight.data.y2018 <- read_csv("Data/2018.csv") %>%
            CARRIER_DELAY, AIR_TIME, CRS_ARR_TIME))
   # head(flight.data.y2018)
 
-# Since this is a large dataset, sampling/manipualting on all the observations 
-# is throwing memory error in my machine. So for ease of processing, I am 
-# considering a subset of data with arrival station as MSP.
-
 ```
 
+Merge data sets and convert all missing values in Delays to 0
 ```{r}
 flight.data.y2014.y2018 <- 
   dplyr::bind_rows(flight.data.y2014,
@@ -108,7 +107,7 @@ flight.data.y2014.y2018$AIR_TIME <-
 
 ```
 
-
+Plot delays from the given data set
 ```{r}
 flight.data.y2014.y2018.wd <- flight.data.y2014.y2018 %>% 
   filter(WEATHER_DELAY > 0) %>%
@@ -142,11 +141,9 @@ summary(flight.data.y2014.y2018.wd)
 summary(flight.data.y2014.y2018.cd)
 
 ```
-Below I am finding if carrier delays surged during a particular time of a day 
-or not.
+Below I am just doing Base R plot for Carrier Delays and no delay. Over the years the performance on on-time arrival has improved. But we cannot make too much with this data since it can be due to more flights added into the schedule. 
 ```{r}
 flight.data.y2014.y2018$year <- format(flight.data.y2014.y2018$FL_DATE, "%Y")
-flight.data.y2014.y2018
 
 agg_counts <- aggregate(cbind(countDelay=CARRIER_DELAY>0,
                               countOntime=CARRIER_DELAY==0) ~ FL_DATE, 
@@ -158,30 +155,29 @@ plot(agg_counts$FL_DATE, agg_counts$countOntime, col = "darkgreen")
 
 ```
 
-
+Using the given data set, let's do samplings for further analysis.
 ```{r Sampling_Strategy - Simple sampling}
 simple.sampling <- dplyr::sample_n(flight.data.y2014.y2018, 1000, replace=FALSE)
 # View(simple.sampling)
 simple.sampling
 ```
 
-```{r Sampling_Strategy - Stratified sampling}# Here I am making a cluster of where Airline code is the strata}
-flight.data.y2014.y2018
+```{r Sampling_Strategy -  strata is on airport code}
 strata.MSP <- flight.data.y2014.y2018[flight.data.y2014.y2018$DEST %in% 'MSP',]
 strata.ATL <- flight.data.y2014.y2018[flight.data.y2014.y2018$DEST %in% 'ATL',]
 strata.JFL <- flight.data.y2014.y2018[flight.data.y2014.y2018$DEST %in% 'JFK',]
 strata.LAX <- flight.data.y2014.y2018[flight.data.y2014.y2018$DEST %in% 'LAX',]
 
 stratified.sampling <- dplyr::sample_n((strata.MSP), 100000, replace=FALSE)
-dim(stratified.sampling)
+head(stratified.sampling)
 ```
 
-```{r Sampling_Strategy - Clustered sampling}
+```{r Clustered sampling}
 #randomly choose 10 groups out of the n
 clusters <- 
   sample(unique(flight.data.y2014.y2018$DEST), size=10, replace=FALSE)
 
-#define sample as all obervations belonging to one of the 10 airpots
+#define sample as all observations belonging to one of the 10 airports
 clustered_by_airport <- 
   flight.data.y2014.y2018[flight.data.y2014.y2018$DEST %in% clusters, ]
 
@@ -190,9 +186,8 @@ table(clustered_by_airport$DEST)
 head(clustered_by_airport)
 
 ```
-
+Below I am ploting Carrier delay using one of the strata identified in prior step
 ```{r CARRIER_DELAY Years 2014 to 2028}
-
 delay_by_airport <- 
   strata.MSP %>% 
   select(c(FL_DATE, DEST, CARRIER_DELAY)) %>% 
@@ -204,7 +199,7 @@ hist(delay_by_airport$FL_DATE,
      col = "lightblue")
 
 ```
-
+Identify the surge in 2016 from above plot. Drill down to months in year 2016
 ```{r CARRIER_DELAY - Months in 2016. }
 delay_by_airport_2016 <- 
   delay_by_airport
@@ -225,8 +220,7 @@ hist(delay_by_airport_2016$FL_DATE,
      col = "lightgreen")
 
 ```
-From the above plotting we can visually come to conclusion that August2016 has an increase in carrier delay. The following RChunk code will plot by Days in Aug2016 to determine which day have an surge in Carrier Delays.
-
+From the above plotting we can come to conclusion that August2016 has an increase in carrier delay. The following code will plot by Days in Aug2016 to determine which day have an surge in Carrier Delays.
 
 ```{r CARRIER_DELAY - Day in Aug2016}
 delay_by_airport_2016_AUG <- 
@@ -247,12 +241,12 @@ hist(delay_by_airport_2016_AUG$FL_DATE,
 
 summary(delay_by_airport_2016_AUG$CARRIER_DELAY)
 ```
-
-From the news archives from that day we can conclude that there was a system outage which caused massive delay/cancellations and the plotting above matches with that conclusion.
+**From the news archives from that day we can conclude that there was a system outage which caused massive delay/cancellations and the plotting above matches with that conclusion.**
 [Delta System Outage - Aug2016](https://money.cnn.com/2016/08/08/news/companies/delta-system-outage-flights/)
 
 
-## WEATHER DELAY
+## WEATHER DELAY. 
+Let's do similar analysis on weather delay and see which month/day have most weather delays.
 ```{r WEATHER DELAY - Years 2014-2028}
 # First select the sub-vectors which contains only he coulums we are interested in
 weather_delay_by_airport <- 
@@ -267,7 +261,7 @@ hist(weather_delay_by_airport$FL_DATE,
      breaks = 100, 
      col = "lightblue")
 ```
-From the above chart it was apparant that in 2016 there was an increase in weather delay. The following RChunks will further drilldown the dara and analyze to find out approximate during which month in 2016 we had this issue.
+From the above chart it was apparant that in 2016 there was an increase in weather delay. The following RChunks will further drill down the data and analyze to find out approximately during which month in 2016 we had delay issue.
 
 ```{r WEATHER DELAY - Months in 2016}
 weather_delay_by_airport_2016 <- 
@@ -288,8 +282,7 @@ hist(weather_delay_by_airport_2016$FL_DATE,
      breaks =120, col = "lightgreen")
 
 ```
-The above histogram shows that whether delays are massive in December month in MSP airport. This could be explained by winter storms related delays.
-
+The above histogram shows that whether delays are more in December month in MSP airport. This could be explained by winter storm related delays.
 
 ```{r WEATHER DELAY - Days in Dec2016}
 weather_delay_by_airport_2016_DEC <- 
@@ -304,8 +297,7 @@ hist(as.numeric(weather_delay_by_airport_2016_DEC$DAY),
      breaks =30, col = "orange")
 
 ```
-
-
+Below code generates weather delay plot for each year using ggplot
 ```{r}
 airport = c('MSP')
 
@@ -368,9 +360,9 @@ geom_line(linetype = 1) +
   labs(title="Total Flights Delayed across Months",
        y = 'Number of Delays',x = 'Months', fill='YEAR')
 ```
-The above plot shows weather delays during 2014-2018 and it's clear that most of the weather related delays happens during year start/end. 
+The above plot shows weather delays during 2014-2018 and it's clear that most of the weather delays happens during year start/end. 
 
-
+Below code generates carrier delay plot for each year using ggplot
 ```{r}
 airport = c('MSP')
 
@@ -433,7 +425,7 @@ geom_line(linetype = 1) +
   labs(title="Total Flights Delayed across Months",
        y = 'Number of Delays',x = 'Months', fill='YEAR')
 ```
-
+There was a spike in graph for year 2016, Aug due to ground stop issued for all Delta flight during that timeframe. 
 
 ```{r regression}
 flight.data.y2018
@@ -464,9 +456,7 @@ ggplot(dataset, aes(x=n,
   geom_point() +
   geom_smooth(method='lm', se=FALSE, col="red", size=1)
 ```
-
-
-There appears to be have a linear relation between carrier delay and total flights. Since there is a linear relation between number of flights arrived and carrier delay, it could be due to airline related issue(like crew/pilot scheduling issue or some other operational issues when there is an increase in number of flights operated by the airline.)
+There appears to be have a linear relation between carrier delay and total flights. Since there is a linear relation between number of flights arrived and carrier delay, it could be due to airline operations issue(like crew/pilot scheduling issue or some other operational issues when there is an increase in number of flights operated by the airline.)
 
 # Topics From Class
 
