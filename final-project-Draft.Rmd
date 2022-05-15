@@ -31,7 +31,7 @@ Use RMarkdown and explore R functions by utilizing some of the topics learned in
 - Use sampling strategy for identifying sample observations.
 - Use Stats function to determine mean, median, IQR,...
 - Regression - Find any co-relation between total flights arriving at a particular airport and  delays to identify if it's the airport operational/capacity issue or not.
-- Cloud hosted data and R Markdown interface. Pull data from AWS S3 buckets than loading from local machine.
+- Cloud hosted data and R Markdown interface. Demonstrate on how to pull data from AWS S3 buckets than loading from local machine.
 
 # Body
 This project perform analysis of flight arrival delays focusing on one particular Station and Airline.
@@ -42,7 +42,7 @@ This analysis can be used to answer some of the questions on airline delays like
 library(knitr) ##for printing tables in R Markdown
 library(dplyr) ##for data munging
 library(ggplot2) ## for charts
-library(infer) ## for rep_sample_n used for clustered sampling
+library(infer) ## for rep_sample_n used for samplings
 ```
 Below code loads data into R.
 Since this is a large data set, sampling/manipualting on all the observations 
@@ -80,6 +80,27 @@ flight.data.y2018 <- read_csv("Data/2018.csv") %>%
            CARRIER_DELAY, AIR_TIME, CRS_ARR_TIME))
   # head(flight.data.y2018)
 
+
+
+
+
+```
+<!-- As an alternate approach on loading the data set, I have used AWS S3 and have the following code snippet to get data from AWS instead of loading from local machine. Most of the times, data will reside in a different system(cloud, different server, mainframe, EDW...) so we need an alternate approach to load the data than downloading to local machine. Here i am considering a way to connect R markdown to AWS using package aws.s3 -
+For this approach first we need to install package 'aws.s3' using install.package
+->
+<!-- Below R chunk I used will demonstrate on accessing data from s3. I am commenting out this code since I have to mask the Secret Access Key before uploading to a public repo(github) else aws will add "AWSCompromisedKeyQuarantineV2" policy to my aws account to protect account for possible key exposure..-->
+```{r}
+# library("aws.s3")
+# Sys.setenv(
+#   "AWS_ACCESS_KEY_ID" = "***************",                # access key id masked.
+#   "AWS_SECRET_ACCESS_KEY" = "**************************", # secret access key masked.
+#   "AWS_DEFAULT_REGION" = "us-east-1"
+# )
+# bucketlist(bucket='seis631-final-project')
+# s3.2014 <- s3read_using(FUN = read.csv, bucket = "seis631-final-project", object = "2014.csv")         
+# head(s3.2014)
+# dim(s3.2014)
+```
 ```
 
 Merge data sets and convert all missing values in Delays to 0
@@ -118,8 +139,8 @@ flight.data.y2014.y2018.wd <- flight.data.y2014.y2018 %>%
 hist(flight.data.y2014.y2018.wd$FL_DATE,
     flight.data.y2014.y2018.wd$countDelay,
      main = paste("Histogram of WEATHER_DELAY" ),
-     xlab = 'Departure Date',
-     ylab = 'Weather Delay',
+     xlab = 'Flight Departure Date',
+     ylab = 'Total Weather Delays',
      breaks = 100,
      col='lightsteelblue2')
 
@@ -132,8 +153,8 @@ flight.data.y2014.y2018.cd <- flight.data.y2014.y2018 %>%
 hist(flight.data.y2014.y2018.cd$FL_DATE, 
     flight.data.y2014.y2018.cd$countDelay,
      main = paste("Histogram of CARRIER_DELAY" ),
-     xlab = 'Departure Date',
-     ylab = 'Carrier Delay',
+     xlab = 'Flight Departure Date',
+     ylab = 'Total Carrier Delays',
      breaks = 100, 
      col='lightsteelblue2')
 
@@ -141,7 +162,7 @@ summary(flight.data.y2014.y2018.wd)
 summary(flight.data.y2014.y2018.cd)
 
 ```
-Below I am just doing Base R plot for Carrier Delays and no delay. Over the years the performance on on-time arrival has improved. But we cannot make too much with this data since it can be due to more flights added into the schedule. 
+Below I am just doing Base R plot for Carrier Delays and no-delay. Over the years the performance on on-time arrival has improved. But we cannot infer too much on this given data since it can be due to more flights added into the schedule. 
 ```{r}
 flight.data.y2014.y2018$year <- format(flight.data.y2014.y2018$FL_DATE, "%Y")
 
@@ -150,8 +171,16 @@ agg_counts <- aggregate(cbind(countDelay=CARRIER_DELAY>0,
                         data = flight.data.y2014.y2018, FUN = sum, 
                         na.rm = TRUE)
 
-plot(agg_counts$FL_DATE, agg_counts$countDelay, col = "red")
-plot(agg_counts$FL_DATE, agg_counts$countOntime, col = "darkgreen")
+plot(agg_counts$FL_DATE, 
+      main = paste("Plot of CARRIER_DELAY/FL_DATE" ),
+      xlab = 'Flight Date',
+      ylab = 'agg Carrier Delays',
+      agg_counts$countDelay, col = "red")
+plot(agg_counts$FL_DATE, 
+      main = paste('Plot of On-Time arrivals/FL_DATE'),
+      xlab = 'Flight Date',
+      ylab = 'agg On-Time arrivals(delay=0)',
+      agg_counts$countOntime, col = "darkgreen")
 
 ```
 
@@ -159,7 +188,7 @@ Using the given data set, let's do samplings for further analysis.
 ```{r Sampling_Strategy - Simple sampling}
 simple.sampling <- dplyr::sample_n(flight.data.y2014.y2018, 1000, replace=FALSE)
 # View(simple.sampling)
-simple.sampling
+head(simple.sampling)
 ```
 
 ```{r Sampling_Strategy -  strata is on airport code}
@@ -194,9 +223,11 @@ delay_by_airport <-
   filter(CARRIER_DELAY > 0) 
 
 hist(delay_by_airport$FL_DATE, 
-     delay_by_airport$CARRIER_DELAY, 
-     breaks = 100, 
-     col = "lightblue")
+    delay_by_airport$CARRIER_DELAY, 
+    breaks = 100, 
+    xlab = 'Flight Date',
+    ylab = 'Density of Carrier Delays',
+    col = "lightblue")
 
 ```
 Identify the surge in 2016 from above plot. Drill down to months in year 2016
@@ -215,9 +246,11 @@ delay_by_airport_2016$MONTH <-
   format(delay_by_airport_2016$FL_DATE, "%m")
 
 hist(delay_by_airport_2016$FL_DATE, 
-     delay_by_airport_2016$CARRIER_DELAY, 
-     breaks =200, 
-     col = "lightgreen")
+      delay_by_airport_2016$CARRIER_DELAY, 
+      breaks =200, 
+      xlab = 'Flight Date',
+      ylab = 'Density of Carrier Delays',
+      col = "lightgreen")
 
 ```
 From the above plotting we can come to conclusion that August2016 has an increase in carrier delay. The following code will plot by Days in Aug2016 to determine which day have an surge in Carrier Delays.
@@ -235,9 +268,11 @@ delay_by_airport_2016_AUG$DAY <-
          "%d")
 
 hist(delay_by_airport_2016_AUG$FL_DATE, 
-     delay_by_airport_2016_AUG$CARRIER_DELAY, 
-     breaks =40, 
-     col = "orange")
+      delay_by_airport_2016_AUG$CARRIER_DELAY, 
+      xlab = 'Flight Date',
+      ylab = 'Density of Carrier Delays',
+      breaks =40, 
+      col = "orange")
 
 summary(delay_by_airport_2016_AUG$CARRIER_DELAY)
 ```
